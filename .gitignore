@@ -33,3 +33,5 @@ go.work.sum
 
 # 默认图片存储位置
 pics/
+
+memento_backend
