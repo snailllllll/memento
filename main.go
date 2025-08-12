@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/snailllllll/napcat_go_sdk"
+	"snail.local/snailllllll/napcat_go_sdk"
 
 	"github.com/gin-gonic/gin"
-	"github.com/snailllllll/utils"
+	"snail.local/snailllllll/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -41,7 +41,7 @@ func main() {
 
 		c.Next()
 	})
-
+	// 
 	token := utils.GetConfig("TOKEN", "")
 	Admin_uin = utils.GetConfig("ADMIN_UIN", "")
 	text := utils.GetConfig("TEXT", "")
