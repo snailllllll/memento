@@ -1,4 +1,4 @@
-module github.com/snailllllll/utils
+module snail.local/snailllllll/utils
 
 go 1.24.2
 
