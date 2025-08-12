@@ -4,14 +4,14 @@ go 1.24.2
 
 require (
 	github.com/gin-gonic/gin v1.10.1
-	github.com/snailllllll/napcat_go_sdk v0.0.0
-	github.com/snailllllll/utils v0.0.0
+	snail.local/snailllllll/napcat_go_sdk v0.0.0
+	snail.local/snailllllll/utils v0.0.0
 	go.mongodb.org/mongo-driver v1.15.0
 )
 
-replace github.com/snailllllll/napcat_go_sdk => ./napcat_go_sdk
+replace snail.local/snailllllll/napcat_go_sdk => ./napcat_go_sdk
 
-replace github.com/snailllllll/utils => ./utils
+replace snail.local/snailllllll/utils => ./utils
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
