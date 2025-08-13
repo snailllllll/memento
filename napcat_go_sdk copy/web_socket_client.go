@@ -120,3 +120,10 @@ func GetWebSocketClient(url string, port uint, token *string) (*WebSocketClient,
 	})
 	return wsClientInstance, err
 }
+
+func GetExistWSClient()  (*WebSocketClient, error){
+	if wsClientInstance == nil {
+		return nil, fmt.Errorf("WebSocketClient not initialized")
+	}
+	return wsClientInstance, nil
+}

@@ -84,7 +84,8 @@ func (receiveMessage *ReceiveMessage) ParseMessage() {
 				forward_views = append(forward_views, msg.ToView())
 			}
 			view_record, _ := SaveMessageViewsToDB(forward_views)
-
+			// 保存消息记录发送人 
+			InsertSender(view_record,receiveMessage.Sender.Nickname)
 			// 保存消息和视图的关联关系
 			collection := db.Collection("message_db", "message_relations")
 			doc := map[string]interface{}{
@@ -96,6 +97,7 @@ func (receiveMessage *ReceiveMessage) ParseMessage() {
 			if err != nil {
 				log.Printf("保存消息关联关系失败: %v", err)
 			}
+
 			// 生成标题
 			go ProcessForwardViewsToDB(view_record)
 		}
@@ -146,7 +148,31 @@ func toInterfaceSlice[T any](slice []T) []interface{} {
 	return result
 }
 
-//
+//向MessageViews注入发送人信息
+func InsertSender(forward_id string, sender string) {
+	// 获取forward_views数据
+	collection := db.Collection("message_db", "forward_views")
+	var fv ForwardView
+	id, err := primitive.ObjectIDFromHex(forward_id)
+	if err != nil {
+		fmt.Printf("invalid forward ID: %v", err)
+		return
+	}
+
+	if err := collection.FindOne(context.Background(), bson.M{"_id": id}).Decode(&fv); err != nil {
+		fmt.Printf("forward view not found: %v", err)
+		return
+	}
+
+	// 更新数据库中的sender
+	update := bson.M{"$set": bson.M{"sender": sender}}
+	_, err = collection.UpdateOne(context.Background(), bson.M{"_id": id}, update)
+	if err != nil {
+		fmt.Printf("failed to update forward view sender: %v", err)
+		return
+	}
+	fmt.Printf("更新sender成功: %v", sender)
+}
 
 // 提取MessageViews的消息并转换为json，生成幽默标题并更新到数据库
 func ProcessForwardViewsToDB(forward_id string) (string, error) {
@@ -195,6 +221,9 @@ func ProcessForwardViewsToDB(forward_id string) (string, error) {
 		return "", fmt.Errorf("failed to update forward view title")
 	}
 
+	senderStr := forwardView["sender"].(string)
+	groupStr  := utils.GetConfig("INFORM_GROUP", "")
+	NewMessageGroupInform(&result.Title, &senderStr, &groupStr)
 	return result.Title, nil
 }
 
