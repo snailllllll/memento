@@ -223,7 +223,7 @@ func ProcessForwardViewsToDB(forward_id string) (string, error) {
 
 	senderStr := forwardView["sender"].(string)
 	groupStr  := utils.GetConfig("INFORM_GROUP", "")
-	NewMessageGroupInform(&result.Title, &senderStr, &groupStr)
+	NewMessageGroupInform(&result.Title, &senderStr, &groupStr,&forward_id)
 	return result.Title, nil
 }
 

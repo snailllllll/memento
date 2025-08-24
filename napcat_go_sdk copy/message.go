@@ -396,7 +396,7 @@ type ForwardMsgContent struct {
 	Messages []Msg `json:"messages"`
 	News     []struct {
 		Text *string `json:"text"`
-	} `json:"news"`
+} `json:"news"`
 	Prompt  string `json:"prompt"`
 	Summary string `json:"summary"`
 	Source  string `json:"source"`

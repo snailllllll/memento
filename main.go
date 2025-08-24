@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"snail.local/snailllllll/napcat_go_sdk"
 
@@ -47,6 +48,7 @@ func main() {
 	text := utils.GetConfig("TEXT", "")
 	addr := utils.GetConfig("ADDR", "")
 	db_uri := utils.GetConfig("DB_URI", "")
+	groupStr  := utils.GetConfig("INFORM_GROUP", "")
 	// 初始化 WebSocket 客户端
 	wsClientInstance, err := napcat_go_sdk.GetWebSocketClient(addr, 3001, &token)
 	if err != nil {
@@ -84,7 +86,6 @@ func main() {
 
 		c.JSON(http.StatusOK, message)
 	})
-
 	// 路由处理函数
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -155,9 +156,38 @@ func main() {
 	//重新生成指定 id 的forward_view 的 title 
 	router.GET("/rebuild_title/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		napcat_go_sdk.ProcessForwardViewsToDB(id)
-		})
-		
+		lockKey := "rebuild_title_" + id
+		// 从db.Collection("message_db", "forward_views")查询消息 title
+		hex_id,_ := primitive.ObjectIDFromHex(c.Param("id"))
+		collection := db.Collection("message_db", "forward_views")
+		var message bson.M
+		if err := collection.FindOne(context.Background(), bson.M{"_id": hex_id}).Decode(&message); err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "message not found"})
+			return
+		}
+		title, ok := message["title"].(string)
+		if !ok {
+			title = "" // 字段不存在或类型不匹配时的默认值
+		}
+
+		if utils.LockExists(lockKey) {
+			c.JSON(http.StatusOK, gin.H{"message": "正在重建中"})
+			napcat_go_sdk.RebuildTitlelock(&title, &groupStr)
+
+			return			
+		} else {
+			utils.SetLock(lockKey, 300*time.Second)
+			defer utils.DeleteLock(lockKey)
+			napcat_go_sdk.RebuildTitleInform(&title, &groupStr)
+			napcat_go_sdk.ProcessForwardViewsToDB(id)
+			c.JSON(http.StatusOK, gin.H{"message": "重建成功"})
+		}
+	})
+	router.GET("/push_to_qq/:id",func(c *gin.Context) {
+		id := c.Param("id")
+		napcat_go_sdk.PushMessageViewToQQ(id)
+
+	})
 	// 启动服务
 	napcat_go_sdk.ProcessEmptyTitleForwardViews() //处理没有title的forward_view,处理历史数据用
 	router.Run()
