@@ -221,9 +221,12 @@ func ProcessForwardViewsToDB(forward_id string) (string, error) {
 		return "", fmt.Errorf("failed to update forward view title")
 	}
 
-	senderStr := forwardView["sender"].(string)
+	senderStr, ok := forwardView["sender"].(string)
+	if !ok {
+		senderStr = ""
+	}
 	groupStr  := utils.GetConfig("INFORM_GROUP", "")
-	NewMessageGroupInform(&result.Title, &senderStr, &groupStr,&forward_id)
+	NewMessageGroupInform(&result.Title, &senderStr, &groupStr, &forward_id)
 	return result.Title, nil
 }
 

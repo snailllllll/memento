@@ -186,13 +186,14 @@ const (
 	//转发单条消息到个人 没什么用 直接获取消息走私聊信息即可
 	FORWARD_FRIEND_SINGLE_MSG Action = "forward_friend_single_msg"
 	//发送合并转发消息
-	SEND_FORWARD_MSG Action = "send_private_forward_msg"
+	SEND_FORWARD_MSG Action = "send_forward_msg"
 	//撤回消息
 	DELETE_MSG Action = "delete_msg"
 	// 获取图片
 	GET_IMAGE Action = "get_image"
 	// 获取合并转发消息
 	GET_FORWARD_MESSAGE Action = "get_forward_msg"
+
 )
 
 type MessageFrom string
@@ -218,6 +219,8 @@ type MsgData struct {
 	UserId   *string `json:"user_id"`
 	NickName *string `json:"nickname"`
 	Content  []Msg   `json:"content"`
+	Url 	 *string `json:"url"`
+	FileSize *string `json:"file_size"`
 }
 
 type replyStatus struct {
@@ -396,7 +399,7 @@ type ForwardMsgContent struct {
 	Messages []Msg `json:"messages"`
 	News     []struct {
 		Text *string `json:"text"`
-} `json:"news"`
+	} `json:"news"`
 	Prompt  string `json:"prompt"`
 	Summary string `json:"summary"`
 	Source  string `json:"source"`
