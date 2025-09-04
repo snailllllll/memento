@@ -272,3 +272,5 @@ func ProcessEmptyTitleForwardViews() error {
 
 	return nil
 }
+
+//TODO: 封装一个方法,接收一个forward_id,返回一个title

@@ -31,7 +31,7 @@ func Init(uri string) error {
 	fmt.Println("成功连接到MongoDB!")
 	return nil
 }
-
+//TODO: 封装dbname
 // Collection 获取MongoDB集合处理器
 func Collection(dbName, colName string) *mongo.Collection {
 	return Client.Database(dbName).Collection(colName)
