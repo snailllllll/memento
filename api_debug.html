@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API调试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .section {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-content {
+            padding: 20px;
+            display: none;
+        }
+        
+        .section-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .headers-container {
+            margin-bottom: 15px;
+        }
+        
+        .header-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .header-item input {
+            flex: 1;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        
+        .response.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .response.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .response pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .method-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .method-get { background: #28a745; }
+        .method-post { background: #007bff; }
+        .method-put { background: #ffc107; color: #000; }
+        .method-delete { background: #dc3545; }
+        
+        .endpoint-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .url-display {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 API调试工具</h1>
+            <p>用于调试所有用户管理、消息和工具接口</p>
+        </div>
+
+        <!-- 基础配置 -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('config')">
+                <h3>⚙️ 基础配置</h3>
+                <span>▼</span>
+            </div>
+            <div class="section-content active" id="config">
+                <div class="form-group">
+                    <label>服务器地址:</label>
+                    <input type="text" id="baseUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+                </div>
+                <div class="form-group">
+                    <label>默认请求头:</label>
+                    <div class="headers-container" id="defaultHeaders">
+                        <div class="header-item">
+                            <input type="text" placeholder="Header名称" value="Content-Type">
+                            <input type="text" placeholder="Header值" value="application/json">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="addHeader('defaultHeaders')">添加Header</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户管理接口 -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('users')">
+                <h3>👥 用户管理接口</h3>
+                <span>▼</span>
+            </div>
+            <div class="section-content" id="users">
+                <div class="grid">
+                    <!-- 创建用户 -->
+                    <div>
+                        <h4>创建用户</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="url-display">/users</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户名 (唯一):</label>
+                            <input type="text" id="createUserName" placeholder="请输入用户名">
+                        </div>
+                        <div class="form-group">
+                            <label>QQ号:</label>
+                            <input type="text" id="createUserQQ" placeholder="请输入QQ号">
+                        </div>
+                        <div class="form-group">
+                            <label>手机号:</label>
+                            <input type="text" id="createUserPhone" placeholder="请输入手机号">
+                        </div>
+                        <button class="btn btn-success" onclick="createUser()">创建用户</button>
+                        <div id="createUserResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 获取所有用户 -->
+                    <div>
+                        <h4>获取所有用户</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/users</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="getAllUsers()">获取用户列表</button>
+                        <div id="getAllUsersResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 根据用户名获取用户 -->
+                    <div>
+                        <h4>根据用户名获取用户</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/users/name/:name</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户名:</label>
+                            <input type="text" id="getUserByName" placeholder="请输入用户名">
+                        </div>
+                        <button class="btn btn-primary" onclick="getUserByName()">查询用户</button>
+                        <div id="getUserByNameResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 根据ID获取用户 -->
+                    <div>
+                        <h4>根据ID获取用户</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/users/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户ID:</label>
+                            <input type="text" id="getUserById" placeholder="请输入用户ID">
+                        </div>
+                        <button class="btn btn-primary" onclick="getUserById()">查询用户</button>
+                        <div id="getUserByIdResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 更新用户 -->
+                    <div>
+                        <h4>更新用户</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-put">PUT</span>
+                            <span class="url-display">/users/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户ID:</label>
+                            <input type="text" id="updateUserId" placeholder="请输入用户ID">
+                        </div>
+                        <div class="form-group">
+                            <label>更新数据 (JSON格式):</label>
+                            <textarea id="updateUserData" placeholder='{"name": "新用户名", "qq": "新QQ号"}'></textarea>
+                        </div>
+                        <button class="btn btn-warning" onclick="updateUser()">更新用户</button>
+                        <div id="updateUserResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 删除用户 -->
+                    <div>
+                        <h4>删除用户</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-delete">DELETE</span>
+                            <span class="url-display">/users/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户ID:</label>
+                            <input type="text" id="deleteUserId" placeholder="请输入用户ID">
+                        </div>
+                        <button class="btn btn-danger" onclick="deleteUser()">删除用户</button>
+                        <div id="deleteUserResponse" class="response" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息接口 -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('messages')">
+                <h3>💬 消息接口</h3>
+                <span>▼</span>
+            </div>
+            <div class="section-content" id="messages">
+                <div class="grid">
+                    <!-- 获取消息列表 -->
+                    <div>
+                        <h4>获取消息列表</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/message_list</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="getMessageList()">获取消息列表</button>
+                        <div id="getMessageListResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 获取所有消息 -->
+                    <div>
+                        <h4>获取所有消息</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/messages</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="getAllMessages()">获取所有消息</button>
+                        <div id="getAllMessagesResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 获取具体消息 -->
+                    <div>
+                        <h4>获取具体消息</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/messages/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>消息ID:</label>
+                            <input type="text" id="getMessageById" placeholder="请输入消息ID">
+                        </div>
+                        <button class="btn btn-primary" onclick="getMessageById()">获取消息</button>
+                        <div id="getMessageByIdResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 重新生成标题 -->
+                    <div>
+                        <h4>重新生成标题</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/rebuild_title/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>消息ID:</label>
+                            <input type="text" id="rebuildTitleId" placeholder="请输入消息ID">
+                        </div>
+                        <button class="btn btn-warning" onclick="rebuildTitle()">重新生成标题</button>
+                        <div id="rebuildTitleResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 推送到QQ -->
+                    <div>
+                        <h4>推送到QQ</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/push_to_qq/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>消息ID:</label>
+                            <input type="text" id="pushToQQId" placeholder="请输入消息ID">
+                        </div>
+                        <button class="btn btn-success" onclick="pushToQQ()">推送到QQ</button>
+                        <div id="pushToQQResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 查看图片 -->
+                    <div>
+                        <h4>查看图片</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/pic/:filename</span>
+                        </div>
+                        <div class="form-group">
+                            <label>文件名:</label>
+                            <input type="text" id="viewPicFilename" placeholder="请输入文件名">
+                        </div>
+                        <button class="btn btn-primary" onclick="viewPic()">查看图片</button>
+                        <div id="viewPicResponse" class="response" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工具接口 -->
+        <div class="section">
+            <div class="section-header" onclick="toggleSection('tools')">
+                <h3>🔧 工具接口</h3>
+                <span>▼</span>
+            </div>
+            <div class="section-content" id="tools">
+                <div class="form-group">
+                    <label>Token (用于需要鉴权的接口):</label>
+                    <input type="text" id="authToken" placeholder="请输入从验证验证码接口获取的token" style="width: 70%;">
+                    <button type="button" class="btn btn-warning" onclick="testToken()">测试Token</button>
+                </div>
+                
+                <div class="grid">
+                    <!-- 申请验证码 -->
+                    <div>
+                        <h4>申请验证码</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="url-display">/verification/code</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户名:</label>
+                            <input type="text" id="verificationName" placeholder="请输入用户名">
+                        </div>
+                        <div class="form-group">
+                            <label>渠道:</label>
+                            <select id="verificationChannel">
+                                <option value="qq">QQ</option>
+                                <option value="phone">手机</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success" onclick="generateVerificationCode()">申请验证码</button>
+                        <div id="verificationCodeResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 验证验证码 -->
+                    <div>
+                        <h4>验证验证码</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-post">POST</span>
+                            <span class="url-display">/verification/verify</span>
+                        </div>
+                        <div class="form-group">
+                            <label>用户名:</label>
+                            <input type="text" id="verifyName" placeholder="请输入用户名">
+                        </div>
+                        <div class="form-group">
+                            <label>渠道:</label>
+                            <select id="verifyChannel">
+                                <option value="qq">QQ</option>
+                                <option value="phone">手机</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>验证码:</label>
+                            <input type="text" id="verifyCode" placeholder="请输入6位验证码" maxlength="6">
+                        </div>
+                        <button class="btn btn-primary" onclick="verifyVerificationCode()">验证验证码</button>
+                        <div id="verifyCodeResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 重新生成标题 -->
+                    <div>
+                        <h4>重新生成标题</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/rebuild_title/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>消息ID:</label>
+                            <input type="text" id="rebuildTitleId" placeholder="请输入消息ID">
+                        </div>
+                        <button class="btn btn-warning" onclick="rebuildTitle()">重新生成标题</button>
+                        <div id="rebuildTitleResponse" class="response" style="display: none;"></div>
+                    </div>
+
+                    <!-- 推送消息到QQ -->
+                    <div>
+                        <h4>推送消息到QQ</h4>
+                        <div class="endpoint-info">
+                            <span class="method-badge method-get">GET</span>
+                            <span class="url-display">/push_to_qq/:id</span>
+                        </div>
+                        <div class="form-group">
+                            <label>消息ID:</label>
+                            <input type="text" id="pushToQQId" placeholder="请输入消息ID">
+                        </div>
+                        <button class="btn btn-danger" onclick="pushToQQ()">推送消息</button>
+                        <div id="pushToQQResponse" class="response" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切换展开/收起
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const header = content.previousElementSibling;
+            const arrow = header.querySelector('span');
+            
+            if (content.classList.contains('active')) {
+                content.classList.remove('active');
+                arrow.textContent = '▶';
+            } else {
+                content.classList.add('active');
+                arrow.textContent = '▼';
+            }
+        }
+
+        // 添加请求头
+        function addHeader(containerId) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = 'header-item';
+            div.innerHTML = `
+                <input type="text" placeholder="Header名称">
+                <input type="text" placeholder="Header值">
+                <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">删除</button>
+            `;
+            container.appendChild(div);
+        }
+
+        // 获取请求头
+        function getHeaders() {
+            const headers = {};
+            const defaultHeaders = document.querySelectorAll('#defaultHeaders .header-item');
+            defaultHeaders.forEach(item => {
+                const key = item.children[0].value.trim();
+                const value = item.children[1].value.trim();
+                if (key && value) {
+                    headers[key] = value;
+                }
+            });
+            return headers;
+        }
+
+        // 显示响应
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = isError ? 'response error' : 'response success';
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // 隐藏所有响应
+        function hideAllResponses() {
+            const responses = document.querySelectorAll('.response');
+            responses.forEach(r => r.style.display = 'none');
+        }
+
+        // API调用函数
+        async function apiCall(method, endpoint, data = null, useAuth = false) {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const url = `${baseUrl}${endpoint}`;
+            
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            
+            // 如果需要鉴权，添加token
+            if (useAuth || endpoint.includes('/messages') || endpoint.includes('/message_list') || 
+                endpoint.includes('/rebuild_title/') || endpoint.includes('/push_to_qq/')) {
+                const token = document.getElementById('authToken').value;
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+            }
+            
+            const options = {
+                method: method,
+                headers: headers,
+            };
+            
+            if (data && method !== 'GET') {
+                options.body = JSON.stringify(data);
+            }
+            
+            const response = await fetch(url, options);
+            const responseData = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(responseData.error || responseData.message || '请求失败');
+            }
+            
+            return responseData;
+        }
+
+        // 用户管理API
+        async function createUser() {
+            hideAllResponses();
+            const userData = {
+                name: document.getElementById('createUserName').value,
+                qq: document.getElementById('createUserQQ').value,
+                phone: document.getElementById('createUserPhone').value
+            };
+            
+            try {
+                const response = await apiCall('POST', '/users', userData);
+                showResponse('createUserResponse', response);
+            } catch (error) {
+                showResponse('createUserResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getAllUsers() {
+            hideAllResponses();
+            try {
+                const response = await apiCall('GET', '/users');
+                showResponse('getAllUsersResponse', response);
+            } catch (error) {
+                showResponse('getAllUsersResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getUserByName() {
+            hideAllResponses();
+            const name = document.getElementById('getUserByName').value;
+            try {
+                const response = await apiCall('GET', `/users/name/${name}`);
+                showResponse('getUserByNameResponse', response);
+            } catch (error) {
+                showResponse('getUserByNameResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getUserById() {
+            hideAllResponses();
+            const id = document.getElementById('getUserById').value;
+            try {
+                const response = await apiCall('GET', `/users/${id}`);
+                showResponse('getUserByIdResponse', response);
+            } catch (error) {
+                showResponse('getUserByIdResponse', { error: error.message }, true);
+            }
+        }
+
+        async function updateUser() {
+            hideAllResponses();
+            const id = document.getElementById('updateUserId').value;
+            const updateData = JSON.parse(document.getElementById('updateUserData').value || '{}');
+            
+            try {
+                const response = await apiCall('PUT', `/users/${id}`, updateData);
+                showResponse('updateUserResponse', response);
+            } catch (error) {
+                showResponse('updateUserResponse', { error: error.message }, true);
+            }
+        }
+
+        async function deleteUser() {
+            hideAllResponses();
+            const id = document.getElementById('deleteUserId').value;
+            try {
+                const response = await apiCall('DELETE', `/users/${id}`);
+                showResponse('deleteUserResponse', response);
+            } catch (error) {
+                showResponse('deleteUserResponse', { error: error.message }, true);
+            }
+        }
+
+        // 消息API
+        async function getMessageList() {
+            hideAllResponses();
+            try {
+                const response = await apiCall('GET', '/message_list', null, true);
+                showResponse('getMessageListResponse', response);
+            } catch (error) {
+                showResponse('getMessageListResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getAllMessages() {
+            hideAllResponses();
+            try {
+                const response = await apiCall('GET', '/messages', null, true);
+                showResponse('getAllMessagesResponse', response);
+            } catch (error) {
+                showResponse('getAllMessagesResponse', { error: error.message }, true);
+            }
+        }
+
+        async function getMessageById() {
+            hideAllResponses();
+            const id = document.getElementById('getMessageById').value;
+            try {
+                const response = await apiCall('GET', `/messages/${id}`, null, true);
+                showResponse('getMessageByIdResponse', response);
+            } catch (error) {
+                showResponse('getMessageByIdResponse', { error: error.message }, true);
+            }
+        }
+
+        async function rebuildTitle() {
+            hideAllResponses();
+            const id = document.getElementById('rebuildTitleId').value;
+            try {
+                const response = await apiCall('GET', `/rebuild_title/${id}`, null, true);
+                showResponse('rebuildTitleResponse', response);
+            } catch (error) {
+                showResponse('rebuildTitleResponse', { error: error.message }, true);
+            }
+        }
+
+        async function pushToQQ() {
+            hideAllResponses();
+            const id = document.getElementById('pushToQQId').value;
+            try {
+                const response = await apiCall('GET', `/push_to_qq/${id}`, null, true);
+                showResponse('pushToQQResponse', response);
+            } catch (error) {
+                showResponse('pushToQQResponse', { error: error.message }, true);
+            }
+        }
+
+        async function viewPic() {
+            hideAllResponses();
+            const filename = document.getElementById('viewPicFilename').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+            const url = `${baseUrl}/pic/${filename}`;
+            
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    window.open(url, '_blank');
+                    showResponse('viewPicResponse', { message: '图片已在新标签页打开' });
+                } else {
+                    showResponse('viewPicResponse', { error: '图片不存在或无法访问' }, true);
+                }
+            } catch (error) {
+                showResponse('viewPicResponse', { error: error.message }, true);
+            }
+        }
+
+        // 工具API
+        async function generateVerificationCode() {
+            hideAllResponses();
+            const verificationData = {
+                name: document.getElementById('verificationName').value,
+                channel: document.getElementById('verificationChannel').value
+            };
+            
+            try {
+                const response = await apiCall('POST', '/verification/code', verificationData);
+                showResponse('verificationCodeResponse', response);
+            } catch (error) {
+                showResponse('verificationCodeResponse', { error: error.message }, true);
+            }
+        }
+
+        async function verifyVerificationCode() {
+            hideAllResponses();
+            const verifyData = {
+                name: document.getElementById('verifyName').value,
+                channel: document.getElementById('verifyChannel').value,
+                code: document.getElementById('verifyCode').value
+            };
+            
+            try {
+                const response = await apiCall('POST', '/verification/verify', verifyData);
+                showResponse('verifyCodeResponse', response);
+                // 如果验证成功，自动填充token
+                if (response.token) {
+                    document.getElementById('authToken').value = response.token;
+                    alert('验证成功！Token已自动填充到上方输入框');
+                }
+            } catch (error) {
+                showResponse('verifyCodeResponse', { error: error.message }, true);
+            }
+        }
+
+        async function testToken() {
+            const token = document.getElementById('authToken').value;
+            if (!token) {
+                alert('请先输入token');
+                return;
+            }
+            
+            try {
+                // 测试token是否有效，调用一个需要鉴权的接口
+                const response = await apiCall('GET', '/message_list', null, true);
+                alert('Token有效！可以正常使用需要鉴权的接口');
+            } catch (error) {
+                alert('Token无效或已过期，请重新验证验证码获取新的token');
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 默认展开第一个section
+            document.querySelectorAll('.section-content').forEach((content, index) => {
+                if (index === 0) content.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

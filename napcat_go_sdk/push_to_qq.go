@@ -16,13 +16,14 @@ import (
 )
 
 func PushMessageViewToQQ(forward_id string) {
-	hex_id, _ := primitive.ObjectIDFromHex(forward_id)
-	msg_collection := db.Collection("message_db", "forward_views")
-	var message bson.M
-	if err := msg_collection.FindOne(context.Background(), bson.M{"_id": hex_id}).Decode(&message); err != nil {
+	log.Printf("开始推送消息到QQ，forward_id: %s", forward_id)
+
+	// 使用GetMessageViewTitle方法获取title
+	title, err := GetMessageViewTitle(forward_id)
+	if err != nil {
+		log.Printf("获取消息标题失败: %v", err)
 		return
 	}
-	title, ok := message["title"].(string)
 
 	// 从关系表中获取原始消息
 	collection := db.Collection("message_db", "message_relations")
@@ -44,7 +45,7 @@ func PushMessageViewToQQ(forward_id string) {
 
 	// 添加查询时间测量
 	startTime := time.Now()
-	err := collection.FindOne(ctx, filter).Decode(&relation)
+	err = collection.FindOne(ctx, filter).Decode(&relation)
 	elapsed := time.Since(startTime)
 
 	if err != nil {
