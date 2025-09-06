@@ -15,14 +15,14 @@ import (
 	"snail.local/snailllllll/utils"
 )
 
-func PushMessageViewToQQ(forward_id string) {
+func PushMessageViewToQQ(forward_id string) error {
 	log.Printf("开始推送消息到QQ，forward_id: %s", forward_id)
 
 	// 使用GetMessageViewTitle方法获取title
 	title, err := GetMessageViewTitle(forward_id)
 	if err != nil {
 		log.Printf("获取消息标题失败: %v", err)
-		return
+		return fmt.Errorf("获取消息标题失败: %w", err)
 	}
 
 	// 从关系表中获取原始消息
@@ -63,7 +63,7 @@ func PushMessageViewToQQ(forward_id string) {
 		} else {
 			log.Printf("查询失败: %v (查询耗时: %v)", err, elapsed)
 		}
-		return
+		return fmt.Errorf("查询消息关系失败: %w", err)
 	} else {
 		log.Printf("查询成功: 找到文档ID=%v (查询耗时: %v)", relation["_id"], elapsed)
 
@@ -79,7 +79,7 @@ func PushMessageViewToQQ(forward_id string) {
 	messageRecord, ok := relation["message_record"].(string)
 	if !ok {
 		log.Println("message_record 字段不存在或类型错误")
-		return
+		return errors.New("message_record 字段不存在或类型错误")
 	}
 
 	// 从 forward_messages 库中读取原始记录
@@ -91,13 +91,13 @@ func PushMessageViewToQQ(forward_id string) {
 	objID, err := primitive.ObjectIDFromHex(messageRecord)
 	if err != nil {
 		log.Printf("转换 ObjectID 失败: %v", err)
-		return
+		return fmt.Errorf("转换 ObjectID 失败: %w", err)
 	}
 
 	err = forwardCollection.FindOne(context.Background(), bson.M{"_id": objID}).Decode(&result)
 	if err != nil {
 		log.Printf("查找原始消息失败: %v", err)
-		return
+		return fmt.Errorf("查找原始消息失败: %w", err)
 	}
 
 	// 现在可以使用 result.Messages 和 result.Count
@@ -105,6 +105,8 @@ func PushMessageViewToQQ(forward_id string) {
 	log.Printf("获取到 %d 条原始消息", result.Count)
 
 	Send_forward_message_to_group(result.Messages, title)
+	return nil
+	return nil
 }
 
 func prasemessages(result []ReceiveMessage) {

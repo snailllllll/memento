@@ -8,6 +8,8 @@ import (
 
 	"memento_backend/db"
 
+	"snail.local/snailllllll/utils/sms"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -44,12 +46,10 @@ func NewVerificationCodeService() *VerificationCodeService {
 func (s *VerificationCodeService) GenerateVerificationCode(ctx context.Context, name, channel string) (string, error) {
 	var lockTimeout time.Duration
 	switch channel {
-	case "email":
-		lockTimeout = 1 * time.Minute
 	case "sms":
-		lockTimeout = 1 * time.Minute
-	case "qq":
 		lockTimeout = 2 * time.Minute
+	case "qq":
+		lockTimeout = 5 * time.Second
 	default:
 		lockTimeout = 2 * time.Minute
 	}
@@ -96,12 +96,25 @@ func (s *VerificationCodeService) GenerateVerificationCode(ctx context.Context, 
 		utils.DeleteLock(lockKey)
 		return "", fmt.Errorf("获取用户信息失败: %v", err)
 	}
+	message := fmt.Sprintf("【翻旧账】您的验证码是：%s，有效期 15分钟，请勿泄露给他人。", code)
 
-	// 发送验证码到QQ
-	if user.QQ != "" {
-		message := fmt.Sprintf("【翻旧账】您的验证码是：%s，有效期 15分钟，请勿泄露给他人。", code)
-		ws, _ := napcat_go_sdk.GetExistWSClient()
-		napcat_go_sdk.SingleTextMessage(&message, &user.QQ, ws)
+	// 根据channel选择发送方式
+	if channel == "qq" {
+		// 发送验证码到QQ
+		if user.QQ != "" {
+			ws, _ := napcat_go_sdk.GetExistWSClient()
+			napcat_go_sdk.SingleTextMessage(&message, &user.QQ, ws)
+		}
+	} else {
+		// 发送验证码到手机
+		if user.Phone != "" {
+			client := sms.NewClient()
+			err := client.SendSMS(2, user.Phone, message)
+			if err != nil {
+				// 记录错误但不中断流程
+				fmt.Printf("发送短信失败: %v", err)
+			}
+		}
 	}
 
 	return code, nil

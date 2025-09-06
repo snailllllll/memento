@@ -37,7 +37,6 @@ func NewWebSocketClient(url string, port uint, token *string) (*WebSocketClient,
 func (client *WebSocketClient) SendMessage(message Message[any]) (string, error) {
 	msg := message.SendWebSocketMsg()
 	// 创建响应通道并存储到sync.Map中
-	fmt.Printf(" 请求已发送，等待 echo_id,echo_id: %s\n", message.Echo)
 	echo_id := message.Echo
 	responseChan := make(chan []byte)
 	client.responseChannels.Store(echo_id, responseChan)
@@ -110,11 +109,10 @@ func GetWebSocketClient(url string, port uint, token *string) (*WebSocketClient,
 		go func() {
 			for {
 				// 接收消息
-				msg, err := wsClientInstance.ReadMessage()
+				_, err := wsClientInstance.ReadMessage()
 				if err != nil {
 					continue
 				}
-				fmt.Println(msg)
 			}
 		}()
 	})

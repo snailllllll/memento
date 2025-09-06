@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"fmt"
+	"log"
 	"memento_backend/db"
 	"memento_backend/middleware"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"snail.local/snailllllll/napcat_go_sdk"
+	"snail.local/snailllllll/utils"
+	"snail.local/snailllllll/utils/sms"
 	"snail.local/snailllllll/verification"
 )
 
@@ -175,60 +178,75 @@ func setupUserRoutes(router *gin.Engine, userService *db.UserService) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
+		// 只返回id和name字段
+		var simpleUsers []map[string]interface{}
+		for _, user := range users {
+			simpleUsers = append(simpleUsers, map[string]interface{}{
+				"id":   user.ID.Hex(),
+				"name": user.Name,
+			})
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"users": users,
-			"count": len(users),
+			"users": simpleUsers,
+			"count": len(simpleUsers),
 		})
 	})
 
-	// 根据用户名获取用户
-	router.GET("/users/name/:name", func(c *gin.Context) {
-		name := c.Param("name")
-		user, err := userService.GetUserByName(c.Request.Context(), name)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, user)
-	})
+	// 创建需要鉴权的用户接口组
+	authUserGroup := router.Group("")
+	authUserGroup.Use(middleware.AuthMiddleware())
+	{
+		// 根据用户名获取用户（需要鉴权）
+		authUserGroup.GET("/users/name/:name", func(c *gin.Context) {
+			name := c.Param("name")
+			user, err := userService.GetUserByName(c.Request.Context(), name)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, user)
+		})
 
-	// 根据ID获取用户
-	router.GET("/users/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		user, err := userService.GetUserByID(c.Request.Context(), id)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, user)
-	})
+		// 根据ID获取用户（需要鉴权）
+		authUserGroup.GET("/users/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			user, err := userService.GetUserByID(c.Request.Context(), id)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, user)
+		})
 
-	// 更新用户
-	router.PUT("/users/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		var updateData map[string]interface{}
-		if err := c.ShouldBindJSON(&updateData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		// 更新用户（需要鉴权）
+		authUserGroup.PUT("/users/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			var updateData map[string]interface{}
+			if err := c.ShouldBindJSON(&updateData); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 
-		if err := userService.UpdateUser(c.Request.Context(), id, updateData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+			if err := userService.UpdateUser(c.Request.Context(), id, updateData); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 
-		c.JSON(http.StatusOK, gin.H{"message": "用户更新成功"})
-	})
+			c.JSON(http.StatusOK, gin.H{"message": "用户更新成功"})
+		})
 
-	// 删除用户
-	router.DELETE("/users/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		if err := userService.DeleteUser(c.Request.Context(), id); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "用户删除成功"})
-	})
+		// 删除用户（需要鉴权）
+		authUserGroup.DELETE("/users/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			if err := userService.DeleteUser(c.Request.Context(), id); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"message": "用户删除成功"})
+		})
+	}
 }
 
 // 工具路由
@@ -255,12 +273,12 @@ func setupToolRoutes(router *gin.Engine, verificationService *verification.Verif
 			})
 			return
 		}
-
+		log.Printf("用户 %s (渠道: %s) 验证码: %s", request.Name, request.Channel, code)
 		c.JSON(http.StatusOK, gin.H{
 			"message": "验证码已生成",
 			"name":    request.Name,
 			"channel": request.Channel,
-			"code":    code, // 实际生产环境中应该不返回验证码，只返回成功消息
+			//"code":    code, // 实际生产环境中应该不返回验证码，只返回成功消息
 		})
 	})
 
@@ -319,6 +337,25 @@ func setupToolRoutes(router *gin.Engine, verificationService *verification.Verif
 		}
 	})
 
+	// SMS电池信息查询接口
+	router.GET("/sms/battery", func(c *gin.Context) {
+		// 导入sms包
+		smsClient := sms.NewClient()
+
+		batteryInfo, err := smsClient.QueryBattery()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("查询电池信息失败: %v", err),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data":    batteryInfo,
+			"message": "电池信息查询成功",
+		})
+	})
+
 	// 创建需要鉴权的接口组
 	authGroup := router.Group("")
 	authGroup.Use(middleware.AuthMiddleware())
@@ -326,13 +363,52 @@ func setupToolRoutes(router *gin.Engine, verificationService *verification.Verif
 		// 重新生成指定 id 的forward_view 的 title（需要鉴权）
 		authGroup.GET("/rebuild_title/:id", func(c *gin.Context) {
 			id := c.Param("id")
-			napcat_go_sdk.Rebuild_title(id)
+			username := c.GetString("username")
+
+			err := napcat_go_sdk.Rebuild_title(id, username)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": fmt.Sprintf("对话 %s 的重命名任务已成功发起", id),
+				"user":    username,
+				"id":      id,
+			})
 		})
 
 		// 推送消息到QQ（需要鉴权）
 		authGroup.GET("/push_to_qq/:id", func(c *gin.Context) {
 			id := c.Param("id")
-			napcat_go_sdk.PushMessageViewToQQ(id)
+
+			// 获取当前登录用户信息
+			username := c.GetString("username")
+			channel := c.GetString("channel")
+
+			// 记录操作日志
+			log.Printf("用户 %s (渠道: %s) 正在推送消息到QQ，ID: %s", username, channel, id)
+
+			// 调用SDK函数
+			err := napcat_go_sdk.PushMessageViewToQQ(id)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": fmt.Sprintf("推送消息失败: %v", err),
+				})
+				return
+			}
+
+			// 发送推送通知到群
+			title, err := napcat_go_sdk.GetMessageViewTitle(id)
+			napcat_go_sdk.PushQQInform(&title, &utils.Config.InformGroup, &username)
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "消息推送成功",
+				"user":    username,
+				"id":      id,
+			})
 		})
 	}
 }

@@ -8,7 +8,7 @@ PROJECT_ROOT=$(cd "$(dirname "$0")" && pwd)
 cd "$PROJECT_ROOT"
 
 # 清理旧构建
-rm -rf bin/linux
+# rm -rf bin/linux
 mkdir -p bin/linux
 
 # 设置交叉编译环境变量

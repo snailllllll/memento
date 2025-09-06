@@ -401,10 +401,10 @@
                         </div>
                         <div class="form-group">
                             <label>消息ID:</label>
-                            <input type="text" id="rebuildTitleId" placeholder="请输入消息ID">
+                            <input type="text" id="rebuildTitleIdMessages" placeholder="请输入消息ID">
                         </div>
-                        <button class="btn btn-warning" onclick="rebuildTitle()">重新生成标题</button>
-                        <div id="rebuildTitleResponse" class="response" style="display: none;"></div>
+                        <button class="btn btn-warning" onclick="rebuildTitleMessages()">重新生成标题</button>
+                        <div id="rebuildTitleMessagesResponse" class="response" style="display: none;"></div>
                     </div>
 
                     <!-- 推送到QQ -->
@@ -416,10 +416,10 @@
                         </div>
                         <div class="form-group">
                             <label>消息ID:</label>
-                            <input type="text" id="pushToQQId" placeholder="请输入消息ID">
+                            <input type="text" id="pushToQQIdMessages" placeholder="请输入消息ID">
                         </div>
-                        <button class="btn btn-success" onclick="pushToQQ()">推送到QQ</button>
-                        <div id="pushToQQResponse" class="response" style="display: none;"></div>
+                        <button class="btn btn-success" onclick="pushToQQMessages()">推送到QQ</button>
+                        <div id="pushToQQMessagesResponse" class="response" style="display: none;"></div>
                     </div>
 
                     <!-- 查看图片 -->
@@ -735,25 +735,27 @@
             }
         }
 
-        async function rebuildTitle() {
+        // 消息接口专用的重新生成标题函数
+        async function rebuildTitleMessages() {
             hideAllResponses();
-            const id = document.getElementById('rebuildTitleId').value;
+            const id = document.getElementById('rebuildTitleIdMessages').value;
             try {
                 const response = await apiCall('GET', `/rebuild_title/${id}`, null, true);
-                showResponse('rebuildTitleResponse', response);
+                showResponse('rebuildTitleMessagesResponse', response);
             } catch (error) {
-                showResponse('rebuildTitleResponse', { error: error.message }, true);
+                showResponse('rebuildTitleMessagesResponse', { error: error.message }, true);
             }
         }
 
-        async function pushToQQ() {
+        // 消息接口专用的推送到QQ函数
+        async function pushToQQMessages() {
             hideAllResponses();
-            const id = document.getElementById('pushToQQId').value;
+            const id = document.getElementById('pushToQQIdMessages').value;
             try {
                 const response = await apiCall('GET', `/push_to_qq/${id}`, null, true);
-                showResponse('pushToQQResponse', response);
+                showResponse('pushToQQMessagesResponse', response);
             } catch (error) {
-                showResponse('pushToQQResponse', { error: error.message }, true);
+                showResponse('pushToQQMessagesResponse', { error: error.message }, true);
             }
         }
 
@@ -826,6 +828,29 @@
                 alert('Token有效！可以正常使用需要鉴权的接口');
             } catch (error) {
                 alert('Token无效或已过期，请重新验证验证码获取新的token');
+            }
+        }
+
+        // 工具接口的函数保持不变
+        async function rebuildTitle() {
+            hideAllResponses();
+            const id = document.getElementById('rebuildTitleId').value;
+            try {
+                const response = await apiCall('GET', `/rebuild_title/${id}`, null, true);
+                showResponse('rebuildTitleResponse', response);
+            } catch (error) {
+                showResponse('rebuildTitleResponse', { error: error.message }, true);
+            }
+        }
+
+        async function pushToQQ() {
+            hideAllResponses();
+            const id = document.getElementById('pushToQQId').value;
+            try {
+                const response = await apiCall('GET', `/push_to_qq/${id}`, null, true);
+                showResponse('pushToQQResponse', response);
+            } catch (error) {
+                showResponse('pushToQQResponse', { error: error.message }, true);
             }
         }
 
